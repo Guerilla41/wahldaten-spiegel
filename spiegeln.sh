@@ -75,19 +75,31 @@ for eintrag in $QUELLEN; do
 	url="${eintrag#*|}"
 	tmp="$(mktemp)"
 
+	meckern="$(mktemp)"
+
+	# Die Klage von curl mitschreiben: Ein blosses "HTTP 000" sagt nur, dass
+	# nichts ankam, und nicht, ob der Name nicht aufloest, die Verbindung
+	# abgewiesen wurde oder in eine Zeitueberschreitung lief. Genau das ist
+	# aber der Unterschied zwischen "die Quelle ist weg" und "wir werden
+	# gedrosselt".
 	code=$(curl -sS -L \
 		--connect-timeout 15 \
 		--max-time 60 \
 		--retry 2 \
 		--retry-delay 3 \
 		-A "$KENNUNG" \
-		-w '%{http_code}' \
+		-w '%{http_code} | Connect %{time_connect}s | IP %{remote_ip}' \
 		-o "$tmp" \
-		"$url" 2>/dev/null) || code="000"
+		"$url" 2>"$meckern") || code="000"
 
-	if [ "$code" != "200" ]; then
-		echo "FEHLER  $name - HTTP $code"
-		eintraege="$eintraege    \"$name\": { \"status\": \"fehler\", \"http\": \"$code\" },
+	klage="$(tr -d '\n' < "$meckern" | cut -c1-200)"
+	rm -f "$meckern"
+
+	nur_code="${code%% *}"
+
+	if [ "$nur_code" != "200" ]; then
+		echo "FEHLER  $name - HTTP $code${klage:+ - $klage}"
+		eintraege="$eintraege    \"$name\": { \"status\": \"fehler\", \"http\": \"$nur_code\" },
 "
 		fehler=1
 		rm -f "$tmp"
