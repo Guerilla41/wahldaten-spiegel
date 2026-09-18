@@ -1,0 +1,4 @@
+# Die amtlichen Exporte sind UTF-8 mit BOM und CRLF. Git darf daran nichts
+# aendern, sonst stolpert der Parser des Plugins ueber die Zeilenenden.
+* -text
+daten/*.csv binary

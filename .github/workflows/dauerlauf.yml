@@ -1,0 +1,83 @@
+# Der Wahlabend-Lauf: einmal von Hand starten, dann spiegelt er stundenlang
+# im festen Takt. Von Hand, weil ein Zeitplan bei GitHub nicht puenktlich ist
+# und am Wahlabend Minuten zaehlen.
+name: Dauerlauf
+
+on:
+  workflow_dispatch:
+    inputs:
+      minuten:
+        description: 'Laufzeit in Minuten (Hoechstwert 340)'
+        required: true
+        default: '330'
+      takt:
+        description: 'Abstand zwischen zwei Abrufen in Sekunden (mindestens 120)'
+        required: true
+        default: '120'
+
+permissions:
+  contents: write
+
+# Nie zwei Laeufe gleichzeitig - sonst schieben sich zwei Commits ins Gehege.
+concurrency:
+  group: spiegel
+  cancel-in-progress: false
+
+jobs:
+  spiegeln:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Absender setzen
+        run: |
+          git config user.name  'Spiegel'
+          git config user.email 'spiegel@users.noreply.github.com'
+
+      - name: Im Takt spiegeln
+        env:
+          MINUTEN: ${{ inputs.minuten }}
+          TAKT: ${{ inputs.takt }}
+        run: |
+          set -uo pipefail
+
+          # Das Landeswahlamt bittet ausdruecklich um mindestens zwei Minuten
+          # Abstand. Ein kleinerer Wert wird stillschweigend angehoben.
+          [ "$TAKT" -ge 120 ] 2>/dev/null || TAKT=120
+          [ "$MINUTEN" -le 340 ] 2>/dev/null || MINUTEN=340
+
+          ende=$(( $(date +%s) + MINUTEN * 60 ))
+          durchgang=0
+
+          echo "Laufzeit $MINUTEN Minuten, Takt $TAKT Sekunden."
+
+          while [ "$(date +%s)" -lt "$ende" ]; do
+            durchgang=$(( durchgang + 1 ))
+            echo "::group::Durchgang $durchgang um $(date -u '+%H:%M:%S') UTC"
+
+            ./spiegeln.sh || echo 'Mindestens eine Quelle hat nicht geantwortet.'
+
+            if [ -n "$(git status --porcelain)" ]; then
+              git add -A
+              git commit -m "Stand $(date -u '+%Y-%m-%d %H:%M') UTC"
+
+              # Der Taktlauf koennte zwischendurch geschoben haben.
+              git pull --rebase --autostash || true
+
+              if git push; then
+                echo 'Neuer Stand veroeffentlicht.'
+              else
+                echo 'Das Schieben ist misslungen, naechster Durchgang versucht es erneut.'
+              fi
+            fi
+
+            echo '::endgroup::'
+
+            # Nicht ueber das Ende hinaus schlafen.
+            [ "$(( $(date +%s) + TAKT ))" -lt "$ende" ] || break
+            sleep "$TAKT"
+          done
+
+          echo "Fertig nach $durchgang Durchgaengen."

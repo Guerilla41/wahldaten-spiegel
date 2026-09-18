@@ -1,0 +1,56 @@
+# Die Absicherung: laeuft von allein alle fuenf Minuten, aber nur innerhalb
+# des Wahlfensters. Faellt der Dauerlauf aus, fuellt dieser Takt die Luecke.
+#
+# GitHub haelt Zeitplaene nicht genau ein; fuenf Minuten koennen zu fuenfzehn
+# werden. Deshalb ist das hier ausdruecklich der zweite und nicht der erste
+# Weg.
+name: Takt
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spiegel
+  cancel-in-progress: false
+
+jobs:
+  spiegeln:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Im Wahlfenster?
+        id: fenster
+        run: |
+          jetzt=$(date -u '+%Y-%m-%d')
+
+          # Vom Aufbau bis zum Tag nach der Wahl. Danach schweigt der Takt,
+          # damit das Repo nicht endlos weiterlaeuft.
+          if [ "$jetzt" \> '2026-09-22' ] || [ "$jetzt" \< '2026-09-18' ]; then
+            echo 'Ausserhalb des Wahlfensters - nichts zu tun.'
+            echo 'aktiv=nein' >> "$GITHUB_OUTPUT"
+          else
+            echo 'aktiv=ja' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Spiegeln
+        if: steps.fenster.outputs.aktiv == 'ja'
+        run: |
+          git config user.name  'Spiegel'
+          git config user.email 'spiegel@users.noreply.github.com'
+
+          ./spiegeln.sh || echo 'Mindestens eine Quelle hat nicht geantwortet.'
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "Takt $(date -u '+%Y-%m-%d %H:%M') UTC"
+            git pull --rebase --autostash || true
+            git push
+          fi
