@@ -28,14 +28,56 @@ CRLF als Zeilenende, 268 Spalten. Dafür sorgt `.gitattributes`; ohne diese
 Datei würde Git die Zeilenenden umschreiben und der Parser des Plugins
 stolpern.
 
-## Die Adressen für das Plugin
+## Zwei Wege zur Seite
 
-Im Plugin unter **Einstellungen → Quellen** eintragen:
+**Der direkte Weg** — der schnelle. Nach jedem Spiegellauf schiebt
+`einspielen.sh` die drei Dateien unmittelbar an die Einspieltür des Plugins.
+Zwischen einer Änderung an der Quelle und der Seite liegt dann nur der Takt des
+Dauerlaufs, also zwei Minuten.
+
+Dafür braucht das Repository zwei Secrets unter
+*Settings → Secrets and variables → Actions*:
+
+| Name | Inhalt |
+|---|---|
+| `BWA_ZIEL` | Die Adresse der Einspieltür, im Plugin unter *Betrieb → Dateien von aussen einspielen* |
+| `BWA_SCHLUESSEL` | Der Einspiel-Schlüssel, ebendort |
+
+Fehlt eines der beiden, überspringt das Skript die Einspielung und meldet das.
+Der Spiegellauf läuft trotzdem durch.
+
+**Der Weg über den Zwischenspeicher** — der langsame, als Rückfall. Das Plugin
+holt sich die Dateien selbst von hier ab. Dazu im Plugin unter
+**Einstellungen → Quellen** eintragen:
 
 ```
 https://raw.githubusercontent.com/Guerilla41/wahldaten-spiegel/main/daten/bvv.csv
 https://raw.githubusercontent.com/Guerilla41/wahldaten-spiegel/main/daten/agh-zweitstimme.csv
 https://raw.githubusercontent.com/Guerilla41/wahldaten-spiegel/main/daten/agh-erststimme.csv
+```
+
+Dieser Weg kostet Zeit: GitHub hält seine Auslieferung fünf Minuten vor und
+räumt sie beim Schieben **nicht** vorzeitig. Gemessen am 18.09.2026: 258
+Sekunden, bis eine geschobene Änderung ausgeliefert wurde. Zusammen mit dem
+Zwei-Minuten-Takt und dem Abrufintervall des Plugins summiert sich das auf bis
+zu zehn Minuten Rückstand.
+
+Beide Wege nebeneinander zu betreiben schadet nicht. Das Plugin erkennt eine
+Lieferung, die es schon hat, an der Prüfsumme und legt sie nicht zweimal ab.
+
+## Trocken erproben
+
+Vor der Wahl enthalten die amtlichen Exporte lauter Nullen. Ein Probelauf über
+den gewöhnlichen Weg legte diesen Stand ab, und weil das Plugin stets den
+neuesten Schnappschuss zeigt, stünde er anschliessend auf der Seite — verwerfen
+lässt er sich nicht.
+
+Deshalb der Trockenlauf: Unter *Actions → Dauerlauf → Run workflow* das Feld
+**trocken** anhaken. Dann wird alles gerechnet und gemeldet, aber nichts
+abgelegt. Von Hand geht dasselbe so:
+
+```bash
+BWA_ZIEL='…' BWA_SCHLUESSEL='…' BWA_TROCKEN=1 ./einspielen.sh
 ```
 
 ## Wie gespiegelt wird

@@ -14,6 +14,10 @@ on:
         description: 'Abstand zwischen zwei Abrufen in Sekunden (mindestens 120)'
         required: true
         default: '120'
+      trocken:
+        description: 'Trocken einspielen: rechnen und melden, aber nichts ablegen'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -40,6 +44,9 @@ jobs:
         env:
           MINUTEN: ${{ inputs.minuten }}
           TAKT: ${{ inputs.takt }}
+          BWA_ZIEL: ${{ secrets.BWA_ZIEL }}
+          BWA_SCHLUESSEL: ${{ secrets.BWA_SCHLUESSEL }}
+          BWA_TROCKEN: ${{ inputs.trocken && '1' || '0' }}
         run: |
           set -uo pipefail
 
@@ -58,6 +65,16 @@ jobs:
             echo "::group::Durchgang $durchgang um $(date -u '+%H:%M:%S') UTC"
 
             ./spiegeln.sh || echo 'Mindestens eine Quelle hat nicht geantwortet.'
+
+            # Unmittelbar weiterreichen, vor dem Schieben: Der direkte Weg ist
+            # der schnelle. Das Ablegen hier ist nur der Rueckfallweg, falls die
+            # Einspieltuer einmal nicht erreichbar ist.
+            #
+            # Jedes Mal, auch wenn sich nichts geaendert hat. Das Plugin erkennt
+            # eine unveraenderte Lieferung an der Pruefsumme und legt sie nicht
+            # noch einmal ab; ein Durchgang, der nach einem Fehlschlag wieder
+            # zustellt, ist das mehr wert als die gesparte Anfrage.
+            ./einspielen.sh || echo 'Die Einspielung ist misslungen, der Spiegel bleibt der Rueckfallweg.'
 
             if [ -n "$(git status --porcelain)" ]; then
               git add -A

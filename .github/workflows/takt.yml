@@ -42,11 +42,16 @@ jobs:
 
       - name: Spiegeln
         if: steps.fenster.outputs.aktiv == 'ja'
+        env:
+          BWA_ZIEL: ${{ secrets.BWA_ZIEL }}
+          BWA_SCHLUESSEL: ${{ secrets.BWA_SCHLUESSEL }}
         run: |
           git config user.name  'Spiegel'
           git config user.email 'spiegel@users.noreply.github.com'
 
           ./spiegeln.sh || echo 'Mindestens eine Quelle hat nicht geantwortet.'
+
+          ./einspielen.sh || echo 'Die Einspielung ist misslungen, der Spiegel bleibt der Rueckfallweg.'
 
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
