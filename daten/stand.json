@@ -1,9 +1,9 @@
 {
-  "stand": "2026-09-18T10:14:22Z",
+  "stand": "2026-09-18T14:33:12Z",
   "quelle": "https://www.wahlen-berlin.de/wahlen/Be2026/AFSPRAES",
   "dateien": {
-    "bvv.csv": { "status": "ok", "bytes": 91094, "sha256": "3579766d453ac61dbd4c818665d4718fa09e11c4a0ed8af3f9159970afce71fe" },
-    "agh-zweitstimme.csv": { "status": "ok", "bytes": 91094, "sha256": "19c1ee4556a30b9fa9bb87ab42a4154724685597ca93c0983d248db63c34382f" },
-    "agh-erststimme.csv": { "status": "ok", "bytes": 91094, "sha256": "7eec3058e1a3bd8f6ec2b455ea0649fd7e0e0c0f86957e7d06ac7e3023fc9cd2" }
+    "bvv.csv": { "status": "ok", "bytes": 91094, "sha256": "674a82e98c3681c3f7c799e36190febbdad9fdeb061fbdd89c5d0b9fcf4f9f69" },
+    "agh-zweitstimme.csv": { "status": "ok", "bytes": 91094, "sha256": "d1a06ad392aa0a7dfd74a338a364cf4afcd0e531833b4dfdd029fba9ba6ea699" },
+    "agh-erststimme.csv": { "status": "ok", "bytes": 91094, "sha256": "dcb2a81d17263c3cf73c82ea01153ed73743e623add5b1ccf4a348235bb1460a" }
   }
 }
